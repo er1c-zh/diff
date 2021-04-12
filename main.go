@@ -3,49 +3,50 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Printf("hello")
-}
+	seq := LCS("hello", "hello world")
 
-type Item interface {
-	EqualTo(Item) bool
-	Val() interface{}
+	fmt.Printf("%s %s",
+		seq.L1[seq.L1From:seq.L1To],
+		seq.L2[seq.L2From:seq.L2To])
+
 }
 
 type Sequence struct {
-	L1, L2 []Item
-	L1From, L1To, L2From, L2To int
+	L1, L2 string
+	L1From, L1To, L2From, L2To int // [from, to)
 }
 
-func MaxSameSubsequence(l1, l2 []Item) Sequence {
+func LCS(l1, l2 string) Sequence {
 	_l1 := len(l1)
 	_l2 := len(l2)
-	type seq struct {
-		L1From, L1To, L2From, L2To int
+	m := make([][]int, 0)
+	for i := 0; i < _l1; i++ {
+		m = append(m, make([]int, _l2))
 	}
-	dp := make([][]seq, 0)
-	for i := 0; i < len(l1); i++ {
-		dp = append(dp, make([]seq, len(l2)))
-	}
-
-	dp[0][0] = seq{
-		L1From: 0,
-		L1To:   0,
-		L2From: 0,
-		L2To:   0,
-	}
+	maxI := 0
+	maxJ := 0
+	max := 0
 
 	for i := 0; i < _l1; i++ {
 		for j := 0; j < _l2; j++ {
-
+			if l1[i] != l2[j] {
+				continue
+			}
+			m[i][j] = 1
+			if i - 1 >= 0 && j - 1 >= 0 {
+				m[i][j] += m[i - 1][j - 1]
+			}
+			if m[i][j] > max {
+				max, maxI, maxJ = m[i][j], i, j
+			}
 		}
 	}
-
 	return Sequence{
 		L1:     l1,
 		L2:     l2,
-		L1From: dp[_l1][_l2].L1From,
-		L1To:   dp[_l1][_l2].L1To,
-		L2From: dp[_l1][_l2].L2From,
-		L2To:   dp[_l1][_l2].L2To,
+		L1From: maxI + 1 - max,
+		L1To:   maxI + 1,
+		L2From: maxJ + 1 - max,
+		L2To:   maxJ + 1,
 	}
 }
