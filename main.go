@@ -61,18 +61,18 @@ func main() {
 
 	for _, c := range chunks {
 		if c.Conflict {
-			color.Red("  <<<<<<<<<<l1\n")
+			color.Red(">>>>>>>>>>>>file 1\n")
 			color.Red("  %s\n", strings.Join(l1[c.L1From:c.L1To], "\n  "))
-			color.Red("  ============\n")
+			color.Red("==============\n")
 			color.Red("  %s\n", strings.Join(l2[c.L2From:c.L2To], "\n  "))
-			color.Red("  <<<<<<<<<<l2\n")
+			color.Red("<<<<<<<<<<<<file 2\n")
 		} else {
 			if c.L1Empty {
 				color.Green("+ %s\n", strings.Join(l2[c.L2From:c.L2To], "\n+ "))
 			} else if c.L2Empty {
 				color.Green("+ %s\n", strings.Join(l1[c.L1From:c.L1To], "\n+ "))
 			} else {
-				color.Cyan("= %s\n", strings.Join(l1[c.L1From:c.L1To], "\n  "))
+				color.Cyan("= %s\n", strings.Join(l1[c.L1From:c.L1To], "\n= "))
 			}
 		}
 	}
