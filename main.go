@@ -1,52 +1,81 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+	"github.com/er1c-zh/diff/diff"
+	"github.com/fatih/color"
+	"io/ioutil"
+	"strings"
+)
+
+var (
+	fileArgs string
+)
+
+func _flag() {
+	flag.StringVar(&fileArgs, "f", "", "file1,file2")
+}
 
 func main() {
-	seq := LCS("hello", "hello world")
-
-	fmt.Printf("%s %s",
-		seq.L1[seq.L1From:seq.L1To],
-		seq.L2[seq.L2From:seq.L2To])
-
-}
-
-type Sequence struct {
-	L1, L2 string
-	L1From, L1To, L2From, L2To int // [from, to)
-}
-
-func LCS(l1, l2 string) Sequence {
-	_l1 := len(l1)
-	_l2 := len(l2)
-	m := make([][]int, 0)
-	for i := 0; i < _l1; i++ {
-		m = append(m, make([]int, _l2))
+	_flag()
+	flag.Parse()
+	if fileArgs == "" {
+		flag.Usage()
+		return
 	}
-	maxI := 0
-	maxJ := 0
-	max := 0
+	files := strings.Split(fileArgs, ",")
+	if len(files) != 2 {
+		flag.Usage()
+		return
+	}
 
-	for i := 0; i < _l1; i++ {
-		for j := 0; j < _l2; j++ {
-			if l1[i] != l2[j] {
-				continue
-			}
-			m[i][j] = 1
-			if i - 1 >= 0 && j - 1 >= 0 {
-				m[i][j] += m[i - 1][j - 1]
-			}
-			if m[i][j] > max {
-				max, maxI, maxJ = m[i][j], i, j
+	var l1, l2 []string
+
+	parseFile := func(p string, t *[]string) error {
+		color.Cyan("file: %s\n", p)
+		b, err := ioutil.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		*t = strings.Split(string(b), "\n")
+		return nil
+	}
+
+	for _, s := range []struct{
+		p string
+		t *[]string
+	}{
+		{files[0], &l1},
+		{files[1], &l2},
+	}{
+		err := parseFile(s.p, s.t)
+		if err != nil {
+			fmt.Printf("Err: %s\n", err.Error())
+			flag.Usage()
+			return
+		}
+	}
+
+	chunks := diff.Do(l1, l2)
+
+	for _, c := range chunks {
+		if c.Conflict {
+			color.Red("  <<<<<<<<<<l1\n")
+			color.Red("  %s\n", strings.Join(l1[c.L1From:c.L1To], "\n  "))
+			color.Red("  ============\n")
+			color.Red("  %s\n", strings.Join(l2[c.L2From:c.L2To], "\n  "))
+			color.Red("  <<<<<<<<<<l2\n")
+		} else {
+			if c.L1Empty {
+				color.Green("+ %s\n", strings.Join(l2[c.L2From:c.L2To], "\n+ "))
+			} else if c.L2Empty {
+				color.Green("+ %s\n", strings.Join(l1[c.L1From:c.L1To], "\n+ "))
+			} else {
+				color.Cyan("= %s\n", strings.Join(l1[c.L1From:c.L1To], "\n  "))
 			}
 		}
 	}
-	return Sequence{
-		L1:     l1,
-		L2:     l2,
-		L1From: maxI + 1 - max,
-		L1To:   maxI + 1,
-		L2From: maxJ + 1 - max,
-		L2To:   maxJ + 1,
-	}
 }
+
+
