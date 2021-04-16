@@ -88,103 +88,50 @@ func Do(a, b, o []string) []Section {
 				Conflict: false,
 			})
 		} else {
-			__ia, __ib := _ia, _ib
+			// check is there any real-conflict
+			init := true
 			realConflict := false
-			useA := true
-			for _io < io {
-				_realConflict := realConflict
-				_useA := useA
-
-				ca, ok := ao.oMap[_io]
-				if !ok {
-					panic("fail 1")
-				}
-				cb, ok := bo.oMap[_io]
-				if !ok {
-					panic("fail 2")
-				}
-				__ia = ca.L1Idx
-				__ib = cb.L2Idx
-				if ca.Conflict && cb.Conflict {
-					if !realConflict {
-						_realConflict = true
-						goto merge
+			useA := false
+			for _o := _io; _o < io; _o++ {
+				ca := ao.oMap[_o]
+				cb := bo.oMap[_o]
+				if init {
+					if ca.Conflict && cb.Conflict {
+						realConflict = true
+						break
 					}
-					goto _continue
-				} else if ca.Conflict || cb.Conflict {
-					if realConflict {
-						_realConflict = false
-						_useA = ca.Conflict
-						goto merge
-					}
-					// free-conflict
-					if (ca.Conflict && useA) || (cb.Conflict && !useA) {
-						goto _continue
-					} else {
-						_useA = !_useA
-						goto merge
-					}
-				} else {
-					// unexpected status
-					panic("fail 3")
+					useA = ca.Conflict
+					init = false
 				}
-			merge:
-				// todo
-				if _ia == __ia && _ib == __ib {
-					// 没有数据，直接切换模式
-					goto next
+				if useA != ca.Conflict {
+					realConflict = true
+					break
 				}
-				if realConflict {
-					result = append(result, Section{
-						L1From:   _ia,
-						L1To:     __ia,
-						L2From:   _ib,
-						L2To:     __ib,
-						L1Empty:  _ia == __ia,
-						L2Empty:  _ib == __ib,
-						Conflict: true,
-						UseL1:    false,
-						UseL2:    false,
-					})
-				} else {
-					if useA {
-						result = append(result, Section{
-							L1From:   _ia,
-							L1To:     __ia,
-							L2From:   _ib,
-							L2To:     __ib,
-							L1Empty:  _ia == __ia,
-							L2Empty:  _ib == __ib,
-							Conflict: false,
-							UseL1:    true,
-							UseL2:    false,
-						})
-					} else {
-						result = append(result, Section{
-							L1From:   _ia,
-							L1To:     __ia,
-							L2From:   _ib,
-							L2To:     __ib,
-							L1Empty:  _ia == __ia,
-							L2Empty:  _ib == __ib,
-							Conflict: false,
-							UseL1:    false,
-							UseL2:    true,
-						})
-					}
-				}
-				_io++
-			next:
-				_ia, _ib = __ia, __ib
-				realConflict = _realConflict
-				useA = _useA
-				continue
-			_continue:
-				if _io+1 == io {
-					__ia, __ib = ia, ib
-					goto merge
-				}
-				_io++
+			}
+			if realConflict {
+				result = append(result, Section{
+					L1From:   _ia,
+					L1To:     ia,
+					L2From:   _ib,
+					L2To:     ib,
+					L1Empty:  ia == _ia,
+					L2Empty:  ib == _ib,
+					Conflict: true,
+					UseL1:    false,
+					UseL2:    false,
+				})
+			} else {
+				result = append(result, Section{
+					L1From:   _ia,
+					L1To:     ia,
+					L2From:   _ib,
+					L2To:     ib,
+					L1Empty:  ia == _ia,
+					L2Empty:  ib == _ib,
+					Conflict: false,
+					UseL1:    useA,
+					UseL2:    !useA,
+				})
 			}
 		}
 		waitConflict = !waitConflict

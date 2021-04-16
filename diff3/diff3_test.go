@@ -12,7 +12,6 @@ func TestDo(t *testing.T) {
 		"1",
 		"2",
 		"3",
-		"6",
 		"5",
 	}
 	b := []string{
@@ -42,21 +41,25 @@ func TestDo(t *testing.T) {
 			fmt.Printf(">>>>>>>>>>>>>>>>>a\n")
 			fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
 			fmt.Printf("==================\n")
-			fmt.Printf("  %s\n", strings.Join(b[i.L1From:i.L1To], "\n  "))
+			fmt.Printf("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
 			fmt.Printf("<<<<<<<<<<<<<<<<<b\n")
 		} else {
-			if i.UseL1 || i.UseL2 {
+			if (i.UseL1 || i.UseL2) && (i.L1Empty || i.L2Empty) {
 				split := "+"
-				if (i.UseL1 && i.L2Empty) || (i.UseL2 && i.L1Empty) {
+				if (i.UseL1 && i.L1Empty) || (i.UseL2 && i.L2Empty) {
 					split = "-"
 				}
 				if i.UseL1 {
 					fmt.Printf(split+" %s\n", strings.Join(a[i.L1From:i.L1To], "\n"+split+" "))
 				} else {
-					fmt.Printf(split+" %s\n", strings.Join(b[i.L1From:i.L1To], "\n"+split+" "))
+					fmt.Printf(split+" %s\n", strings.Join(b[i.L2From:i.L2To], "\n"+split+" "))
 				}
 			} else {
-				fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+				if i.UseL1 {
+					fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+				} else {
+					fmt.Printf("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
+				}
 			}
 		}
 	}

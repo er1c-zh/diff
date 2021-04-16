@@ -1,81 +1,71 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/er1c-zh/diff/diff"
+	"github.com/er1c-zh/diff/diff3"
 	"github.com/fatih/color"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
-var (
-	fileArgs string
-)
-
-func _flag() {
-	flag.StringVar(&fileArgs, "f", "", "file1,file2")
+func usage() {
+	fmt.Printf("usage: diff3 file_a file_old file_b\n")
 }
 
 func main() {
-	_flag()
-	flag.Parse()
-	if fileArgs == "" {
-		flag.Usage()
+	args := os.Args
+	if len(args) != 4 {
+		fmt.Printf("Fail: invalid params.\n")
+		usage()
 		return
 	}
-	files := strings.Split(fileArgs, ",")
-	if len(files) != 2 {
-		flag.Usage()
-		return
-	}
-
-	var l1, l2 []string
-
-	parseFile := func(p string, t *[]string) error {
-		color.Cyan("file: %s\n", p)
-		b, err := ioutil.ReadFile(p)
+	var a, b, o []string
+	files := args[1:]
+	for path, ptr := range map[string]*[]string{
+		files[0]: &a,
+		files[1]: &o,
+		files[2]: &b,
+	} {
+		tmp, err := ioutil.ReadFile(path)
 		if err != nil {
-			return err
-		}
-		*t = strings.Split(string(b), "\n")
-		return nil
-	}
-
-	for _, s := range []struct{
-		p string
-		t *[]string
-	}{
-		{files[0], &l1},
-		{files[1], &l2},
-	}{
-		err := parseFile(s.p, s.t)
-		if err != nil {
-			fmt.Printf("Err: %s\n", err.Error())
-			flag.Usage()
+			fmt.Printf("Fail: can't read file %s: %s\n", files[0], err.Error())
+			usage()
 			return
 		}
+		*ptr = strings.Split(string(tmp), "\n")
 	}
 
-	chunks := diff.Do(l1, l2)
+	l := diff3.Do(a, b, o)
 
-	for _, c := range chunks {
-		if c.Conflict {
-			color.Red(">>>>>>>>>>>>file 1\n")
-			color.Red("  %s\n", strings.Join(l1[c.L1From:c.L1To], "\n  "))
-			color.Red("==============\n")
-			color.Red("  %s\n", strings.Join(l2[c.L2From:c.L2To], "\n  "))
-			color.Red("<<<<<<<<<<<<file 2\n")
+	for _, i := range l {
+		if i.Conflict {
+			color.Red(">>>>>>>>>>>>>>>>>a\n")
+			color.Red("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+			color.Red("==================\n")
+			color.Red("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
+			color.Red("<<<<<<<<<<<<<<<<<b\n")
 		} else {
-			if c.L1Empty {
-				color.Green("+ %s\n", strings.Join(l2[c.L2From:c.L2To], "\n+ "))
-			} else if c.L2Empty {
-				color.Green("+ %s\n", strings.Join(l1[c.L1From:c.L1To], "\n+ "))
+			if (i.UseL1 || i.UseL2) && (i.L1Empty || i.L2Empty) {
+				f := color.Green
+				split := "+"
+				if (i.UseL1 && i.L1Empty) || (i.UseL2 && i.L2Empty) {
+					split = "-"
+					f = color.Red
+				} else if i.UseL1 {
+					f(split+" %s\n", strings.Join(a[i.L1From:i.L1To], "\n"+split+" "))
+				} else {
+					f(split+" %s\n", strings.Join(b[i.L2From:i.L2To], "\n"+split+" "))
+				}
 			} else {
-				color.Cyan("= %s\n", strings.Join(l1[c.L1From:c.L1To], "\n= "))
+				if i.UseL1 {
+					color.Cyan("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+				} else if i.UseL2 {
+					color.Cyan("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
+				} else {
+					fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+				}
 			}
 		}
 	}
 }
-
-
