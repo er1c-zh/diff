@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/er1c-zh/diff/diff3"
 	"github.com/fatih/color"
@@ -39,33 +40,88 @@ func main() {
 	l := diff3.Do(a, b, o)
 
 	for _, i := range l {
+		j, _ := json.Marshal(i)
+		fmt.Printf("%s\n", string(j))
+	}
+	for _, i := range l {
 		if i.Conflict {
-			color.Red(">>>>>>>>>>>>>>>>>a\n")
-			color.Red("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
-			color.Red("==================\n")
-			color.Red("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
-			color.Red("<<<<<<<<<<<<<<<<<b\n")
-		} else {
-			if (i.UseL1 || i.UseL2) && (i.L1Empty || i.L2Empty) {
-				f := color.Green
-				split := "+"
-				if (i.UseL1 && i.L1Empty) || (i.UseL2 && i.L2Empty) {
-					split = "-"
-					f = color.Red
-				} else if i.UseL1 {
-					f(split+" %s\n", strings.Join(a[i.L1From:i.L1To], "\n"+split+" "))
-				} else {
-					f(split+" %s\n", strings.Join(b[i.L2From:i.L2To], "\n"+split+" "))
-				}
-			} else {
-				if i.UseL1 {
-					color.Cyan("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
-				} else if i.UseL2 {
-					color.Cyan("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
-				} else {
-					fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+			lo := i.OTo - i.OFrom
+			la := i.L1To - i.L1From
+			lb := i.L2To - i.L2From
+			aSame := lo == la
+			bSame := lo == lb
+
+			if aSame {
+				for idx := 0; idx < lo; idx++ {
+					if a[i.L1From + idx] != o[i.OFrom + idx] {
+						aSame = false
+						break
+					}
 				}
 			}
+
+			if bSame {
+				for idx := 0; idx < lo; idx++ {
+					if b[i.L2From + idx] != o[i.OFrom + idx] {
+						bSame = false
+						break
+					}
+				}
+			}
+
+			if !aSame && !bSame {
+				f := color.HiRed
+				f(">>>>>>>>>>>>>>>>>a\n")
+				f("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
+				f("==================\n")
+				f("  %s\n", strings.Join(b[i.L2From:i.L2To], "\n  "))
+				f("<<<<<<<<<<<<<<<<<b\n")
+			} else if aSame && bSame {
+				panic("all same!")
+			} else if aSame || bSame {
+				use := a
+				from := i.L1From
+				to := i.L1To
+				line := i.L1To - i.L1From
+				anotherLine := i.L2To - i.L2From
+				if aSame {
+					use = b
+					from = i.L2From
+					to = i.L2To
+					line = i.L2To - i.L2From
+					anotherLine = i.L1To - i.L1From
+				}
+
+				f := color.Cyan
+				prefix := " "
+				if anotherLine == 0 {
+					prefix = "+"
+					f = color.Green
+				} else if line == 0 {
+					if aSame {
+						use = a
+						from = i.L1From
+						to = i.L1To
+						line = i.L1To - i.L1From
+						anotherLine = i.L2To - i.L2From
+					} else {
+						use = b
+						from = i.L2From
+						to = i.L2To
+						line = i.L2To - i.L2From
+						anotherLine = i.L1To - i.L1From
+					}
+					prefix = "-"
+					f = color.Red
+				}
+				for _, s := range use[from:to] {
+					f("%s %s\n", prefix, s)
+				}
+			} else {
+				panic("wtf")
+			}
+		} else {
+			fmt.Printf("  %s\n", strings.Join(a[i.L1From:i.L1To], "\n  "))
 		}
 	}
 }
